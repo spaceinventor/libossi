@@ -4,7 +4,7 @@
 #include <semaphore.h>
 #include <time.h>
 
-#include "critical_section.h"
+#include "ossi/critical_section.h"
 
 void si_init_critical(critical_section_t *me) {
 

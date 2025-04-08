@@ -9,12 +9,13 @@ conf_data = configuration_data()
 includes = include_directories('include', '.')
 install_subdir('include', install_dir : '.')
 sources = files([])
+dependencies = []
 
 subdir('src')
 
 configure_file(output : 'libossi.h', configuration: conf_data)
 
-ossi_lib = static_library('ossi',
+ossi_lib = library('ossi',
     sources: sources,
     dependencies : dependencies,
     include_directories : includes,

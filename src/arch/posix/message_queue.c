@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "message_queue.h"
+#include "ossi/message_queue.h"
 
 void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t length, void *storage) {
 
