@@ -17,6 +17,7 @@ extern void message_queue_create(message_queue_t *me, uint32_t item_size, uint32
 extern int message_queue_send(message_queue_t *me, void *item);
 extern int message_queue_send_isr(message_queue_t *me, void *item);
 extern int message_queue_receive(message_queue_t *me, void *item);
+extern int message_queue_receive_wto(message_queue_t *me, void *item, uint32_t to_ms);
 
 #ifdef __cplusplus
 }

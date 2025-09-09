@@ -37,3 +37,17 @@ int message_queue_receive(message_queue_t *me, void *item) {
 
     return 0;
 }
+
+int message_queue_receive_wto(message_queue_t *me, void *item, uint32_t to_ms) {
+
+    TickType_t ticks = (to_ms / portTICK_PERIOD_MS);
+    if (ticks == 0) {
+        ticks = 1;
+    }
+    BaseType_t res = xQueueReceive(me->handle, item, ticks);
+    if (res != pdTRUE) {
+        return -1;
+    }
+
+    return 0;
+}
