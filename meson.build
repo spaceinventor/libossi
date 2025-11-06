@@ -11,6 +11,8 @@ install_subdir('include', install_dir : '.')
 sources = files([])
 dependencies = []
 
+dependencies += dependency('param', fallback: ['param', 'param_dep'])
+
 subdir('src')
 
 configure_file(output : 'libossi.h', configuration: conf_data)
