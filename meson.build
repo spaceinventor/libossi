@@ -1,4 +1,4 @@
-project('ossi', 'c', version: '0.0.1')
+project('ossi', 'c', version: '0.0.2')
 
 conf_data = configuration_data()
 
