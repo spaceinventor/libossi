@@ -7,6 +7,7 @@ sources = files([])
 dependencies = []
 
 dependencies += dependency('param', fallback: ['param', 'param_dep'])
+dependencies += dependency('csp', fallback: ['csp', 'csp_dep'])
 
 subdir('src')
 
@@ -25,7 +26,7 @@ pkg = import('pkgconfig')
 pkg.generate(
 	ossi_lib,
 	subdirs: ['.'],
-    requires: ['param']
+    requires: ['param', 'csp']
 )
 
 ossi_dep = declare_dependency(dependencies: dependencies, include_directories: includes, link_with : ossi_lib)
