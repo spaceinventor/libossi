@@ -11,7 +11,7 @@ dependencies += dependency('csp', fallback: ['csp', 'csp_dep'])
 
 subdir('src')
 
-configure_file(output : 'libossi.h', configuration: conf_data, install_dir: 'include/')
+configure_file(output : 'libossi.h', configuration: conf_data, install_dir: 'include/', install_tag: 'devel')
 
 ossi_lib = library('ossi',
     sources: sources,
