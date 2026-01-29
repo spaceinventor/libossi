@@ -3,58 +3,99 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <mqueue.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
 #include "ossi/message_queue.h"
+#include "ossi/critical_section.h"
 
-char cleanup_buffer[OS_QUEUE_SIZE];
+
+#define OSSI_QUEUE_NAME_TEMPLATE "/tmp/ossi_%p"
+#define QUEUE_PERMISSIONS 0660
+
+static critical_section_t ossi_msg_queues_cs;
+static char *queue_files_to_clean[100];
+static uint8_t queue_count = 0;
 
 static void message_queue_cleanup(void) {    
-    snprintf(cleanup_buffer, OS_QUEUE_SIZE - 1, "/ossi_%d", getpid());
-    mq_unlink(cleanup_buffer);
+    for (uint8_t i = 0; i < queue_count; i++) {
+        unlink(queue_files_to_clean[i]);
+        free(queue_files_to_clean[i]);
+    }
 }
+
+typedef struct systemv_ossi_queue_s {
+    uint32_t item_size;
+} systemv_ossi_queue_t;
 
 void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t length, void *storage) {
-    struct mq_attr attr;
-    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
-    attr.mq_maxmsg = 10;
-    attr.mq_msgsize = item_size;
-    attr.mq_flags   = 0;
+    key_t msg_queue_key;
+    systemv_ossi_queue_t *sysv_queue = (systemv_ossi_queue_t *)me->obj;
 
-    snprintf((char *)me->obj, sizeof(me->obj) - 1, "/ossi_%d", getpid());
-    mqd_t mqd = mq_open ((const char *)me->obj, O_RDWR|O_CREAT, mode, &attr);
-    if (mqd == -1)
-        {
-        perror("message_queue_create: mq_open() failure");
+    sysv_queue->item_size = item_size;
+    char *queue_path_based_on_me = calloc(1, PATH_MAX);
+    if(!queue_path_based_on_me)  {
+        perror("message_queue_create: calloc() failure");
         exit(0);
-    };
-    atexit(message_queue_cleanup);
+    } else {
+        snprintf(queue_path_based_on_me, PATH_MAX - 1, OSSI_QUEUE_NAME_TEMPLATE, (void *)me);
+    }
+    int q_fd = open(queue_path_based_on_me, O_CREAT | O_EXCL, 0660);
+    if(q_fd) {
+        close(q_fd);
+    }
+    int qid;
+
+    if ((msg_queue_key = ftok (queue_path_based_on_me, getpid())) == -1) {
+        free(queue_path_based_on_me);
+        perror ("message_queue_create: ftok() failed");
+        exit (1);
+    }
+
+    if ((qid = msgget (msg_queue_key, IPC_CREAT | QUEUE_PERMISSIONS)) == -1) {
+        free(queue_path_based_on_me);
+        perror ("message_queue_create: msgget() failed");
+        exit (1);
+    }
+    si_init_critical(&ossi_msg_queues_cs);
+    si_enter_critical(&ossi_msg_queues_cs, SI_CRITICAL_WAIT_FOREVER);
+    if(queue_count == 0) {
+        atexit(message_queue_cleanup);
+    }
+    if(queue_count < 100) {
+        queue_files_to_clean[queue_count++] = queue_path_based_on_me;    
+    } else {
+        free(queue_path_based_on_me);
+        perror ("message_queue_create: too many queues (100 max)");
+        si_leave_critical(&ossi_msg_queues_cs);
+        exit (1);
+    }
+    si_leave_critical(&ossi_msg_queues_cs);
     /* Bit nasty, this. Using the handle to store the queue id */
-    memcpy(&me->handle, &mqd, sizeof(mqd));
+    memcpy(&me->handle, &qid, sizeof(qid));
 }
 
-int message_queue_send(message_queue_t *me, void *item) {    
-    struct mq_attr attr;
-    mq_getattr((mqd_t)(intptr_t)me->handle, &attr);
-    mq_send ((mqd_t)(intptr_t)me->handle, (char *)item, attr.mq_msgsize, 10);
+int message_queue_send(message_queue_t *me, void *item) {   
+    systemv_ossi_queue_t *sysv_queue = (systemv_ossi_queue_t *)me->obj; 
+    if (msgsnd ((int)(intptr_t)me->handle, item, sysv_queue->item_size, 0) == -1) {
+        perror ("message_queue_send: msgsnd() failed");
+        return 1;
+    }
     return 0;
 }
 
 int message_queue_send_isr(message_queue_t *me, void *item) {
-    struct mq_attr attr;
-    mq_getattr((mqd_t)(intptr_t)me->handle, &attr);
-    mq_send ((mqd_t)(intptr_t)me->handle, (char *)item, attr.mq_msgsize, 10);
-    return 0;
+    return message_queue_send(me, item);
 }
 
 int message_queue_receive(message_queue_t *me, void *item) {
-    unsigned int priority = 0;
-    struct mq_attr attr;
-    mq_getattr((mqd_t)(intptr_t)me->handle, &attr);
-    ssize_t res = mq_receive ((mqd_t)(intptr_t)me->handle, (char *)item, attr.mq_msgsize, &priority);
-    if (res == -1) {
-        perror("message_queue_receive: mq_receive() failure");
-        exit(0);
-    } 
+    systemv_ossi_queue_t *sysv_queue = (systemv_ossi_queue_t *)me->obj; 
+    if (msgrcv ((int)(intptr_t)me->handle, item, sysv_queue->item_size, 0, 0) == -1) {
+        perror ("message_queue_receive: msgrcv() failed");
+        return 1;
+    }
     return 0;
 }
