@@ -6,51 +6,21 @@
 #include <vmem/vmem_client.h>
 #include <vmem/vmem_codec.h>
 
-vmem_decompress_fnc_t decompress_handler = (vmem_decompress_fnc_t)NULL;
-vmem_compress_fnc_t compress_handler = (vmem_decompress_fnc_t)NULL;
-
-void vmem_server_set_decompress_fnc(vmem_decompress_fnc_t fnc) {
-    decompress_handler = fnc;
-}
-
-void vmem_server_set_compress_fnc(vmem_compress_fnc_t fnc) {
-    compress_handler = fnc;
-}
-
-vmem_decompress_fnc_t vmem_server_get_decompress_fnc(void) {
-    return decompress_handler;
-}
-
-vmem_compress_fnc_t vmem_server_get_compress_fnc(void) {
-    return compress_handler;
-}
-
-static int vmem_codec_request_handler(csp_conn_t *conn, csp_packet_t *packet, void *context) {
+static int vmem_decompress_request_handler(csp_conn_t *conn, csp_packet_t *packet, void *context) {
 
 	vmem_request_t * request = (void *) packet->data;
 
-	if (request->type == VMEM_SERVER_DECOMPRESS) {
+	vmem_request_codec_t * codec = (vmem_request_codec_t *)request->body;
 
-		vmem_decompress_fnc_t decompress_fnc = vmem_server_get_decompress_fnc();
+	uint64_t src_addr = be64toh(codec->src_address);
+	uint32_t src_len = be32toh(codec->length);
+	uint64_t dst_addr = be64toh(codec->dst_address);
 
-		if (decompress_fnc == NULL) {
-			printf("ERROR: No VMEM codec function defined\n");
-			csp_buffer_free(packet);
-			return -1;
-		}
-
-	    vmem_request_codec_t * codec = (vmem_request_codec_t *)request->body;
-
-		uint64_t src_addr = be64toh(codec->src_address);
-		uint32_t src_len = be32toh(codec->length);
-		uint64_t dst_addr = be64toh(codec->dst_address);
-
-		uint32_t final_len;
-		packet->data32[0] = decompress_fnc(dst_addr, &final_len, src_addr, src_len);
-		packet->data32[1] = htobe32(final_len);
-		packet->length = 8;
-		csp_send(conn, packet);
-	}
+	uint32_t final_len;
+	packet->data32[0] = ossi_decompressor(dst_addr, &final_len, src_addr, src_len);
+	packet->data32[1] = htobe32(final_len);
+	packet->length = 8;
+	csp_send(conn, packet);
 
 	return 0;
 }
@@ -111,13 +81,4 @@ int vmem_client_compress(int node, int timeout, uint64_t src_address, uint64_t d
 
 int vmem_client_decompress(int node, int timeout, uint64_t src_address, uint64_t dst_address, uint32_t length, int version) {
 	return vmem_client_codec(node, timeout, src_address, dst_address, length, VMEM_SERVER_DECOMPRESS, version);
-}
-
-static vmem_handler_obj_t vmem_codec_context;
-
-int vmem_codec_server_init(void) {
-
-    vmem_server_bind_type(VMEM_SERVER_DECOMPRESS, vmem_codec_request_handler, &vmem_codec_context, NULL);
-
-	return 0;
 }
