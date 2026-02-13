@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <endian.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <unistd.h>
 
