@@ -57,7 +57,7 @@ static int vmem_codec_request_handler(csp_conn_t *conn, csp_packet_t *packet, vo
 	return 0;
 }
 
-int vmem_client_codec(int node, int timeout, uint64_t src_address, uint64_t dst_address, uint32_t length, int type, int version) {
+static int vmem_client_codec(int node, int timeout, uint64_t src_address, uint64_t dst_address, uint32_t length, int type, int version) {
 
 	int res = -1;
 
