@@ -27,6 +27,7 @@ vmem_compress_fnc_t vmem_server_get_compress_fnc(void) {
 }
 
 static int vmem_codec_request_handler(csp_conn_t *conn, csp_packet_t *packet, void *context) {
+	(void)context;
 
 	vmem_request_t * request = (void *) packet->data;
 
@@ -40,7 +41,7 @@ static int vmem_codec_request_handler(csp_conn_t *conn, csp_packet_t *packet, vo
 			return -1;
 		}
 
-	    vmem_request_codec_t * codec = (vmem_request_codec_t *)request->body;
+	    vmem_request_codec_t * codec = (vmem_request_codec_t *) &request->data;
 
 		uint64_t src_addr = be64toh(codec->src_address);
 		uint32_t src_len = be32toh(codec->length);
@@ -70,7 +71,7 @@ int vmem_client_codec(int node, int timeout, uint64_t src_address, uint64_t dst_
 		return res;
 
 	vmem_request_t * request = (void *) packet->data;
-    vmem_request_codec_t * codec = (vmem_request_codec_t *)request->body;
+    vmem_request_codec_t * codec = (vmem_request_codec_t *) &request->data;
 	request->version = version;
 	request->type = type;
     codec->src_address = htobe64(src_address);

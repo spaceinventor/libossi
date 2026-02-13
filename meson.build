@@ -1,4 +1,4 @@
-project('ossi', 'c', version: '0.0.2')
+project('ossi', 'c', version: '0.0.2', default_options: ['warning_level=3', 'werror=true'])
 
 conf_data = configuration_data()
 

@@ -32,6 +32,9 @@ typedef struct systemv_ossi_queue_s {
 } systemv_ossi_queue_t;
 
 void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t length, void *storage) {
+    (void)length;
+    (void)storage;
+    
     key_t msg_queue_key;
     systemv_ossi_queue_t *sysv_queue = (systemv_ossi_queue_t *)me->obj;
 
