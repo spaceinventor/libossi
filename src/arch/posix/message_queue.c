@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -10,13 +11,14 @@
 #include <sys/msg.h>
 
 #include "ossi/message_queue.h"
-#include "ossi/critical_section.h"
 
 
 #define OSSI_QUEUE_NAME_TEMPLATE "/tmp/ossi_%p"
 #define QUEUE_PERMISSIONS 0660
 
-static critical_section_t ossi_msg_queues_cs;
+static pthread_mutex_t g_crit_init_mtx = PTHREAD_MUTEX_INITIALIZER;
+
+
 static char *queue_files_to_clean[100];
 static uint8_t queue_count = 0;
 
@@ -63,8 +65,7 @@ void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t leng
         perror ("message_queue_create: msgget() failed");
         exit (1);
     }
-    si_init_critical(&ossi_msg_queues_cs);
-    si_enter_critical(&ossi_msg_queues_cs, SI_CRITICAL_WAIT_FOREVER);
+    pthread_mutex_lock(&g_crit_init_mtx);
     if(queue_count == 0) {
         atexit(message_queue_cleanup);
     }
@@ -73,10 +74,10 @@ void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t leng
     } else {
         free(queue_path_based_on_me);
         perror ("message_queue_create: too many queues (100 max)");
-        si_leave_critical(&ossi_msg_queues_cs);
+        pthread_mutex_unlock(&g_crit_init_mtx);
         exit (1);
     }
-    si_leave_critical(&ossi_msg_queues_cs);
+    pthread_mutex_unlock(&g_crit_init_mtx);
     /* Bit nasty, this. Using the handle to store the queue id */
     memcpy(&me->handle, &qid, sizeof(qid));
 }
