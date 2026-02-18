@@ -1,7 +1,4 @@
-if host_machine.system() == 'linux'
-	subdir('posix')
-	conf_data.set('LIBOSSI_POSIX', 1)
-elif host_machine.system() == 'freertos'
+if host_machine.system() == 'freertos'
 	subdir('freertos')
 	conf_data.set('LIBOSSI_FREERTOS', 1)
 else

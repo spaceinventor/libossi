@@ -7,8 +7,6 @@ includes = include_directories('include', '.')
 sources = files([])
 dependencies = []
 
-dependencies += dependency('param', fallback: ['param', 'param_dep'])
-dependencies += dependency('csp', fallback: ['csp', 'csp_dep'])
 
 subdir('src')
 
