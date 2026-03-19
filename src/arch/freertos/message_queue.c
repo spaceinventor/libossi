@@ -6,14 +6,12 @@
 
 #include "ossi/message_queue.h"
 
-#if 0
 void message_queue_create(message_queue_t *me, uint32_t item_size, uint32_t length, void *storage) {
 
     // TODO illegal cast alignment, we need to ensure that the storage is properly aligned for the item size
-    me->handle = xQueueCreateStatic(length, item_size, storage, (StaticQueue_t *)&me->obj[0]);
+    me->handle = xQueueCreateStatic(length, item_size, storage, (StaticQueue_t *)(void *)&me->obj[0]);
     vQueueAddToRegistry(me->handle, "MsgQ");
 }
-#endif
 
 int message_queue_send(message_queue_t *me, void *item) {
 
