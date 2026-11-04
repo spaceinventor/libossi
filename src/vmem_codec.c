@@ -2,6 +2,7 @@
 #include <endian.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <vmem/vmem_client.h>
 #include <vmem/vmem_codec.h>
